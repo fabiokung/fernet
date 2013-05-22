@@ -15,11 +15,8 @@ const ivCap = (aes.BlockSize + 2) / 3 * 3
 
 var pipe = []byte{'|'}
 
-func jsonVerify(tok []byte, ttl time.Duration, now time.Time, k *Key) []byte {
-	if *k == (Key{}) {
-		return nil
-	}
-	signingKey, cryptKey := jsonKeys(k)
+func jsonVerify(tok []byte, ttl time.Duration, now time.Time, k Key) []byte {
+	signingKey, cryptKey := k.signBytes(), k.cryptBytes()
 	i := bytes.LastIndex(tok, pipe)
 	if i == -1 {
 		return nil
@@ -33,7 +30,8 @@ func jsonVerify(tok []byte, ttl time.Duration, now time.Time, k *Key) []byte {
 
 	// key and message are intentionally reversed to match behavior
 	// of ruby-fernet.
-	if subtle.ConstantTimeCompare(hmac, genhmac(signingKey, fields)) != 1 {
+	newHash := genhmac(signingKey, fields)
+	if subtle.ConstantTimeCompare(hmac, newHash) != 1 {
 		return nil
 	}
 	s := bytes.Split(fields, pipe)
@@ -54,7 +52,11 @@ func jsonVerify(tok []byte, ttl time.Duration, now time.Time, k *Key) []byte {
 	if len(p)%aes.BlockSize != 0 || len(iv) != aes.BlockSize {
 		return nil
 	}
-	bc, _ := aes.NewCipher(cryptKey)
+	bc, err := aes.NewCipher(cryptKey)
+	if err != nil {
+		return nil
+	}
+
 	cipher.NewCBCDecrypter(bc, iv).CryptBlocks(p, p)
 	msg := unpad(p)
 	if msg == nil {
@@ -71,10 +73,4 @@ func jsonVerify(tok []byte, ttl time.Duration, now time.Time, k *Key) []byte {
 		return nil
 	}
 	return msg
-}
-
-func jsonKeys(k *Key) (signingKey, cryptKey []byte) {
-	s := []byte(k.Encode())
-	i := len(s) / 2
-	return s[:i], s[i : i+16]
 }

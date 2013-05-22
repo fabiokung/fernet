@@ -1,6 +1,7 @@
 package fernet
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -28,7 +29,7 @@ var keys = []struct {
 	},
 	{
 		"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-		Key{},
+		make(Key, 32),
 	},
 }
 
@@ -36,7 +37,7 @@ func TestDecodeKey(t *testing.T) {
 	for _, w := range keys {
 		if g, err := DecodeKey(w.enc); err != nil {
 			t.Fatal(err)
-		} else if *g != w.key {
+		} else if !bytes.Equal(g, w.key) {
 			t.Fatalf("expected %q, got %q", w.key, g)
 		}
 	}

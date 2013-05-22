@@ -7,9 +7,14 @@ import (
 	"time"
 )
 
+type Message struct {
+	Secret string
+}
+
 type test struct {
 	secret string
 	src    []byte
+	msg    Message
 	iv     [aes.BlockSize]byte
 	now    time.Time
 	ttl    time.Duration
@@ -25,17 +30,6 @@ var genTokens = []*test{
 		now:    time.Date(1985, time.October, 26, 1, 20, 0, 0, time.FixedZone("PDT", -7*3600)),
 		ttl:    60 * time.Second,
 		token:  []byte("2woUxqnnpRAj-ztUarjDIfllJBmLiBMjfcmZesHVIhcAAAAAHcCesAABAgMEBQYHCAkKCwwNDg8tNtXKRlVimf3hMAhjOASy"),
-	},
-}
-
-var genErrTokens = []*test{
-	{
-		secret: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-		src:    []byte("hello"),
-		now:    time.Date(1985, time.October, 26, 1, 20, 0, 0, time.FixedZone("PDT", -7*3600)),
-		ttl:    60 * time.Second,
-		token:  []byte("FcrjzZRmwcQIuBDcGCh8nGUB8ZD_mXxjqhMln9aIraAAAAAAHcCesAABAgMEBQYHCAkKCwwNDg8kMx7cZZDiiNuT9qRo32pg"),
-		desc:   "zero-value key",
 	},
 }
 
@@ -107,13 +101,6 @@ var verifyBadTokens = []*test{
 		token:  []byte("fe5sCHPyF13H837yvtc65xAlWfXXP3fEUX_jMiB74EwAAAAAHcCesHV0d3ZxcHNyfXx_fnl4e3otNtXKRlVimf3hMAhjOASy"),
 		desc:   "incorrect IV (leads to padding error)",
 	},
-	{
-		secret: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-		now:    time.Date(1985, time.October, 26, 1, 20, 1, 0, time.FixedZone("PDT", -7*3600)),
-		ttl:    60 * time.Second,
-		token:  []byte("FcrjzZRmwcQIuBDcGCh8nGUB8ZD_mXxjqhMln9aIraAAAAAAHcCesAABAgMEBQYHCAkKCwwNDg8kMx7cZZDiiNuT9qRo32pg"),
-		desc:   "zero-value key",
-	},
 }
 
 func TestGenerate(t *testing.T) {
@@ -124,17 +111,6 @@ func TestGenerate(t *testing.T) {
 			t.Errorf("%#v", string(g))
 		}
 		if err != nil {
-			t.Errorf("err %v", err)
-		}
-	}
-}
-
-func TestGenerateErr(t *testing.T) {
-	for _, tok := range genErrTokens {
-		k := MustDecodeKey(tok.secret)
-		g, err := gen(tok.src, tok.iv[:], tok.now, k)
-		if err == nil || err == nil || g != nil {
-			t.Errorf("exp nil, got %#v", string(g))
 			t.Errorf("err %v", err)
 		}
 	}
