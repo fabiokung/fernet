@@ -62,14 +62,22 @@ func jsonVerify(tok []byte, ttl time.Duration, now time.Time, k Key) []byte {
 	if msg == nil {
 		return nil
 	}
-	var ts struct {
-		Time time.Time `json:"issued_at"`
+	var parsedMsg struct {
+		Time string `json:"issued_at"`
 	}
-	err = json.Unmarshal(msg, &ts)
+	err = json.Unmarshal(msg, &parsedMsg)
 	if err != nil {
 		return nil
 	}
-	if now.After(ts.Time.Add(ttl)) {
+	issuedAt, err := time.Parse(time.RFC3339, parsedMsg.Time)
+	if err != nil {
+		// try again
+		issuedAt, err = time.Parse("2006/01/02 15:04:05 -0700", parsedMsg.Time)
+		if err != nil {
+			return nil
+		}
+	}
+	if now.After(issuedAt.Add(ttl)) {
 		return nil
 	}
 	return msg
